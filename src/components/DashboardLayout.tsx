@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, Wallet, Calendar, MessageSquare, Bell, Settings,
-  HelpCircle, LogOut, Menu, X, ChevronDown, Search, UserCircle
+  HelpCircle, LogOut, Menu, X, ChevronDown, Search, UserCircle, ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,14 +11,16 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
+import { motion, AnimatePresence } from "framer-motion";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
   { label: "My Groups", icon: Users, path: "/dashboard/groups" },
   { label: "Contributions", icon: Wallet, path: "/dashboard/contributions" },
   { label: "Payouts", icon: Calendar, path: "/dashboard/payouts" },
-  { label: "Messages", icon: MessageSquare, path: "/dashboard/messages", badge: 3 },
-  { label: "Notifications", icon: Bell, path: "/dashboard/notifications", badge: 5 },
+  { label: "Messages", icon: MessageSquare, path: "/dashboard/messages" },
+  { label: "Notifications", icon: Bell, path: "/dashboard/notifications" },
   { label: "Support", icon: HelpCircle, path: "/dashboard/support" },
   { label: "Settings", icon: Settings, path: "/dashboard/settings" },
 ];
@@ -27,13 +29,34 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, profile, isAdmin, signOut } = useAuth();
+
+  const initials = profile
+    ? `${(profile.first_name || "")[0] || ""}${(profile.last_name || "")[0] || ""}`.toUpperCase() || "U"
+    : "U";
+  const displayName = profile
+    ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || user?.email || "User"
+    : user?.email || "User";
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
       {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Sidebar */}
       <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-sidebar text-sidebar-foreground transform transition-transform lg:translate-x-0 ${
@@ -60,7 +83,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                   key={item.path}
                   to={item.path}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                     isActive
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
                       : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
@@ -68,19 +91,32 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                 >
                   <item.icon className="w-5 h-5" />
                   <span>{item.label}</span>
-                  {item.badge && (
-                    <Badge className="ml-auto bg-accent text-accent-foreground text-xs h-5 min-w-5 flex items-center justify-center">
-                      {item.badge}
-                    </Badge>
-                  )}
                 </Link>
               );
             })}
+
+            {isAdmin && (
+              <>
+                <div className="h-px bg-sidebar-border my-3" />
+                <Link
+                  to="/admin"
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    location.pathname.startsWith("/admin")
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                  }`}
+                >
+                  <ShieldCheck className="w-5 h-5" />
+                  <span>Admin Panel</span>
+                </Link>
+              </>
+            )}
           </nav>
 
           <div className="p-4 border-t border-sidebar-border">
             <button
-              onClick={() => navigate("/login")}
+              onClick={handleSignOut}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground w-full transition-colors"
             >
               <LogOut className="w-5 h-5" />
@@ -106,15 +142,14 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="relative" onClick={() => navigate("/dashboard/notifications")}>
               <Bell className="w-5 h-5" />
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-destructive text-white text-[10px] flex items-center justify-center">5</span>
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="gap-2">
                   <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center">
-                    <span className="text-white text-sm font-medium">JD</span>
+                    <span className="text-white text-sm font-medium">{initials}</span>
                   </div>
-                  <span className="hidden md:inline text-sm">John Doe</span>
+                  <span className="hidden md:inline text-sm">{displayName}</span>
                   <ChevronDown className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -125,8 +160,13 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                 <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
                   <Settings className="w-4 h-4 mr-2" /> Settings
                 </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem onClick={() => navigate("/admin")}>
+                    <ShieldCheck className="w-4 h-4 mr-2" /> Admin Panel
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/login")}>
+                <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="w-4 h-4 mr-2" /> Sign Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -136,7 +176,13 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
         {/* Page Content */}
         <main className="flex-1 p-4 md:p-6 lg:p-8">
-          {children}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {children}
+          </motion.div>
         </main>
       </div>
     </div>

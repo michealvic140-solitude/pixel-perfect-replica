@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { motion } from "framer-motion";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -18,28 +20,42 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate login — will be replaced with real auth
-    setTimeout(() => {
-      setLoading(false);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if (error) {
+      toast({ title: "Login failed", description: error.message, variant: "destructive" });
+    } else {
       toast({ title: "Welcome back!", description: "Redirecting to your dashboard..." });
       navigate("/dashboard");
-    }, 1000);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
       <div className="absolute inset-0 gradient-hero opacity-5" />
-      <div className="w-full max-w-md relative">
+      <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+      
+      <motion.div 
+        className="w-full max-w-md relative"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center">
+            <motion.div 
+              className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
               <span className="text-white font-display font-bold text-xl">R</span>
-            </div>
+            </motion.div>
             <span className="font-display font-bold text-2xl text-foreground">Rejoice Trust</span>
           </Link>
         </div>
 
-        <Card className="border-border/50 shadow-xl">
+        <Card className="border-border/50 shadow-xl backdrop-blur-sm">
           <CardHeader className="text-center pb-4">
             <CardTitle className="font-display text-2xl">Welcome Back</CardTitle>
             <CardDescription>Sign in to access your Ajo dashboard</CardDescription>
@@ -47,10 +63,10 @@ const Login = () => {
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email or Phone</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
-                  type="text"
+                  type="email"
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -99,7 +115,7 @@ const Login = () => {
           <Shield className="w-3 h-3" />
           <span>Protected with bank-grade encryption</span>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
